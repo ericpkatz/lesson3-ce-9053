@@ -4,16 +4,42 @@ var WidgetCurrency = function(base, amount){
     this.base = base || 'foo';
     this.amount = amount || 0;
 };
-WidgetCurrency.prototype.display = function(){
-    return [this.base, "|", this.amount].join(" ");
-};
-WidgetCurrency.prototype.convert = function(toBase,exchangeRates){
-    var ratio = exchangeRates[this.base]/exchangeRates[toBase]; 
-    this.amount = this.amount*ratio;
-    this.base = toBase;
+WidgetCurrency.prototype = {
+    display: function(){
+        return [this.base, "|", this.amount].join(" ");
+    }, 
+    convert : function(toBase,exchangeRateFinder, cb){
+        var that = this;
+        exchangeRateFinder.getRates(function(exchangeRates){
+            console.log(that);
+            var ratio = exchangeRates[that.base]/exchangeRates[toBase]; 
+            that.amount = that.amount*ratio;
+            that.base = toBase;
+            cb();
+        });
+    },
+    callApi: function(cb){
+        var message = this.base.toUpperCase();
+        setTimeout(function(){
+            cb("hello world " + message); 
+        }, 500);
+    }
 };
 
 describe("WidgetCurrency", function(){
+    describe("call api", function(){
+       var result;
+       beforeEach(function(done){
+           var currency = new WidgetCurrency();
+           currency.callApi(function(msg){
+              result = msg;
+              done();
+           });
+       });
+       it("result is hello world FOO", function(){
+           expect(result).toEqual("hello world FOO");
+       });
+    });
     it("is defined", function(){
         expect(WidgetCurrency).toBeDefined();
     });
@@ -23,7 +49,6 @@ describe("WidgetCurrency", function(){
         
         beforeEach(function(){
             currency = new WidgetCurrency();
-            console.log(currency);
         });
         
         it("base is foo", function(){
@@ -61,14 +86,21 @@ describe("WidgetCurrency", function(){
     
     describe("convert", function(){
         var currency;
-        beforeEach(function(){
+        beforeEach(function(done){
             var exchangeRates = {
                 foo: 5,
                 bar: 10,
                 buzz: 100
             };
+            var exchangeFinder = {
+                getRates : function(cb){
+                   cb(exchangeRates) 
+                }
+            };
             currency = new WidgetCurrency("foo", 20);
-            currency.convert("bar", exchangeRates)
+            currency.convert("bar", exchangeFinder, function(){
+               done(); 
+            });
         });
        describe("converting 20 foo to bar", function(){
            it("base should be bar", function(){
